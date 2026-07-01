@@ -1,0 +1,103 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 16/05/2026
+#
+#     Description: Customized Apache + PHP external deployment sketch
+#                  This configuration is suited only for single or fixed node clusters, since it exploits local storage
+#                  In case of a real distributed configuration, consider deploying distributed storage solutions (e.g. Longhorn)
+#
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache-external
+  labels:
+    app: apache-external
+  namespace: apache-external
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apache-external
+  template:
+    metadata:
+      labels:
+        app: apache-external
+    spec:
+      containers:
+        - name: apache-external
+          image: ghcr.io/andreacaravano/nhmp-apache:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: apache-external-volume
+              mountPath: /var/www/html
+      volumes:
+        - name: apache-external-volume
+          persistentVolumeClaim:
+            claimName: apache-external-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-external-svc
+  namespace: apache-external
+spec:
+  type: ClusterIP
+  selector:
+    app: apache-external
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: apache-external-pv
+  namespace: apache-external
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: "/home/polimi/www"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: apache-external-pvc
+  namespace: apache-external
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apache-external-ingress
+  namespace: apache-external
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: piattaforma.caravano.duckdns.org # public facing domain (optional)
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: apache-external-svc
+                port:
+                  number: 80

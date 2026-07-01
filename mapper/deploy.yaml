@@ -1,0 +1,62 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 07/05/2026
+#
+#     Description: gNB-Core mapper deployment sketch
+#
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: log-matcher-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: log-matcher-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: log-matcher-binding
+subjects:
+  - kind: ServiceAccount
+    name: log-matcher-sa
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: log-matcher-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Our Python script
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oai-log-matcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-matcher
+  template:
+    metadata:
+      labels:
+        app: log-matcher
+    spec:
+      serviceAccountName: log-matcher-sa
+      containers:
+        - name: matcher
+          image: ghcr.io/andreacaravano/oai-gnb-core-mapper:latest
+          env:
+            # needed for proper logging flushing
+            - name: PYTHONUNBUFFERED
+              value: "1"

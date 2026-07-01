@@ -1,0 +1,84 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 16/05/2026
+#
+#     Description: Customized Apache + PHP internal deployment sketch
+#                  This configuration is suited only for single or fixed node clusters, since it exploits local storage
+#                  In case of a real distributed configuration, consider deploying distributed storage solutions (e.g. Longhorn)
+#
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache-internal
+  labels:
+    app: apache-internal
+  namespace: apache-internal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apache-internal
+  template:
+    metadata:
+      labels:
+        app: apache-internal
+    spec:
+      containers:
+        - name: apache-internal
+          image: ghcr.io/andreacaravano/nhmp-apache:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: apache-internal-volume
+              mountPath: /var/www/html
+      volumes:
+        - name: apache-internal-volume
+          persistentVolumeClaim:
+            claimName: apache-internal-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-internal-svc
+  namespace: apache-internal
+spec:
+  type: ClusterIP
+  selector:
+    app: apache-internal
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: apache-internal-pv
+  namespace: apache-internal
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: "/home/polimi/www-int"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: apache-internal-pvc
+  namespace: apache-internal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 5Gi

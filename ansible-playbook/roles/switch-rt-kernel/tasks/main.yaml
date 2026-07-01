@@ -1,0 +1,46 @@
+# Remember: create roles/switch-rt-kernel/defaults/main.yaml with your token!
+- name: Updates the Ubuntu Pro client to the latest version
+  ansible.builtin.apt:
+    name: ubuntu-pro-client
+    state: latest
+    update_cache: true
+
+- name: Attach Ubuntu Pro subscription key
+  ansible.builtin.command: pro attach {{ ubuntu_pro_token }}
+  register: ubuntu_pro_attach
+  changed_when: "'is already attached to' not in ubuntu_pro_attach.stderr"
+  failed_when: false # Do not fail when already attached
+
+- name: Disable Canonical Livepatch (incompatible with the real-time kernel)
+  ansible.builtin.command: pro disable livepatch
+  register: livepatch_disable
+  changed_when: "'is not currently enabled' not in livepatch_disable.stdout"
+  failed_when: false # Do not fail when disabled or not present
+
+- name: Enable realtime repository
+  ansible.builtin.shell: |
+    yes | pro enable realtime-kernel --variant generic
+  register: pro_enable_rt
+  failed_when: 
+    - pro_enable_rt.rc != 0
+    - "'already enabled' not in pro_enable_rt.stdout"
+  changed_when: pro_enable_rt.rc == 0
+
+- name: Install the real-time kernel (PREEMPT_RT)
+  ansible.builtin.apt:
+    name: ubuntu-realtime
+    state: present
+    update_cache: true
+
+- name: Check if reboot is required after the new kernel have been installed (probably, yes)
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required
+
+- name: Proceed to reboot the node if necessary
+  ansible.builtin.reboot:
+    msg: "Rebooting to activate the new real-time kernel..."
+    connect_timeout: 5
+    reboot_timeout: 750
+    post_reboot_delay: 30
+  when: reboot_required.stat.exists

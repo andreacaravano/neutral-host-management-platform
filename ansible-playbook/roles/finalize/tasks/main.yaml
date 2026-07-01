@@ -1,0 +1,28 @@
+- name: Update cache and packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+    cache_valid_time: 3600
+
+- name: Install s-tui and build tools
+  ansible.builtin.apt:
+    name:
+      - make
+      - build-essential
+      - s-tui
+      - stress
+    state: present
+
+- name: Remove orphan packages
+  ansible.builtin.apt:
+    autoremove: true
+
+- name: Check if a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: finalize_reboot
+
+- name: Reboot warning
+  ansible.builtin.debug:
+    msg: "Rebooting after update..."
+  when: finalize_reboot.stat.exists

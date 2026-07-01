@@ -1,0 +1,50 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 30/06/2026
+#
+#     Description: Automated container image update Workflow for GitHub Actions
+#
+
+name: Apache - Automated container image update
+
+on:
+  schedule:
+    - cron: "15 6 * * 1"
+      timezone: "Europe/Rome"
+  workflow_dispatch:
+
+jobs:
+  push-store-image:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: "./apache"
+    steps:
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@main
+
+      - name: "Login to GitHub Container Registry"
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GIT_TOKEN}}
+
+      - name: "Build Inventory Image"
+        run: |
+          docker build . --tag ghcr.io/andreacaravano/nhmp-apache:latest
+          docker push ghcr.io/andreacaravano/nhmp-apache:latest
+  cleanup-registry:
+    runs-on: ubuntu-latest
+    needs: push-store-image
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          owner: "andreacaravano"
+          packages: "nhmp-apache"
+          token: ${{secrets.GIT_TOKEN}}
+          keep-n-untagged: 3

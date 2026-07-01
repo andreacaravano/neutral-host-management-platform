@@ -1,0 +1,109 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 30/06/2026
+#
+#     Description: Customized power governance framework deployment sketch
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resource-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nh-controller-sa
+  namespace: resource-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nh-controller-role
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nh-controller-binding
+subjects:
+  - kind: ServiceAccount
+    name: nh-controller-sa
+    namespace: resource-controller
+roleRef:
+  kind: ClusterRole
+  name: nh-controller-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-controller
+  namespace: resource-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-controller
+  template:
+    metadata:
+      labels:
+        app: resource-controller
+    spec:
+      serviceAccountName: nh-controller-sa
+      hostPID: true
+      nodeSelector:
+        server: "true"
+      containers:
+        - name: controller
+          image: ghcr.io/andreacaravano/nhmp-energy-controller:latest
+          env:
+            # needed for proper logging flushing
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: sys-fs
+              mountPath: /host-sys
+            - name: rke2-cpu-manager
+              mountPath: /kubelet-state
+              readOnly: true
+            - name: host-tmp
+              mountPath: /host-tmp
+      volumes:
+        - name: sys-fs
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: rke2-cpu-manager
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: host-tmp
+          hostPath:
+            path: /tmp
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource-controller-svc
+  namespace: resource-controller
+spec:
+  selector:
+    app: resource-controller
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

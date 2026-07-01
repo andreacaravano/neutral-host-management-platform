@@ -1,0 +1,19 @@
+write-kubeconfig-mode: "0644"
+tls-san:
+  - {{ vip }}
+  - {{ hostvars['server1']['ansible_host'] }}
+  - {{ domain_name_1 }}
+  - {{ domain_name_2 }}
+node-label:
+  - server=true
+cni:
+- multus
+- canal
+kubelet-arg:
+  # Enable IP forwarding
+  - "allowed-unsafe-sysctls=net.ipv4.ip_forward"
+  # Necessary to pin pods on isolated cores
+  - "cpu-manager-policy=static"
+  # Reserve cores 0-1 and 12-13 to the host system/K8s (symmetrically coupled)
+  - "reserved-cpus=0-1,12-13"
+  - "topology-manager-policy=best-effort"

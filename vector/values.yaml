@@ -1,0 +1,151 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 16/05/2026
+#
+#     Description: Vector Kubernetes logging solution matcher
+#
+
+# The agent role is the one being employed on final/edge nodes
+role: Agent
+
+# Disable the unused network service
+service:
+  enabled: false
+
+customConfig:
+  data_dir: "/tmp/vector"
+
+  # Sources (in our case, only the gNB)
+  sources:
+    gnb_logs:
+      type: "kubernetes_logs"
+      # The name label is our discriminant here
+      extra_label_selector: "app.kubernetes.io/name in (oai-gnb, oai-gnb2, oai-gnb3)"
+
+  # Transformations ("raw output data")
+  transforms:
+    process_telemetry:
+      type: "remap"
+      inputs:
+        - "gnb_logs"
+      source: |
+        # Tenant identification (optionally, also namespace)
+        .tenant_namespace = .kubernetes.pod_namespace
+        .tenant_instance = .kubernetes.pod_labels."app.kubernetes.io/instance"
+
+        # Pod kind identification (gNB)
+        app_name = .kubernetes.pod_labels."app.kubernetes.io/name"
+
+        clean_msg = strip_ansi_escape_codes!(string!(.message))
+        matched = false
+
+        # OpenAirInterface gNB logic
+        if starts_with(string!(app_name), "oai-gnb") {
+            # Association between UE-ID and C-RNTI (see specific mapper)
+            parsed_map = parse_regex(clean_msg, r'UE ID (?P<ue_id>\d+) RNTI (?P<rnti>[0-9a-fA-F]+)') ?? {}
+            if !exists(parsed_map.rnti) {
+                parsed_map = parse_regex(clean_msg, r'UE RNTI (?P<rnti>[0-9a-fA-F]+) CU-UE-ID (?P<ue_id>\d+)') ?? {}
+            }
+            if exists(parsed_map.rnti) && exists(parsed_map.ue_id) {
+                .metric_type = "gnb_ue_id_mapping"
+                .rnti = parsed_map.rnti
+                .ue_id = parsed_map.ue_id
+                matched = true
+            }
+
+            if contains(clean_msg, "Received RRCSetupComplete") {
+                parsed = parse_regex(clean_msg, r'RNTI\s+(?P<rnti>[0-9a-fA-F]+)\)\s+Received RRCSetupComplete') ?? {}
+                if exists(parsed.rnti) {
+                    .metric_type = "gnb_rrc_connected"
+                    .rnti = parsed.rnti
+                    matched = true
+                }
+            }
+
+            # Captures disconnections
+            if contains(clean_msg, "Remove NR rnti") {
+                parsed = parse_regex(clean_msg, r'Remove NR rnti 0x(?P<rnti>[0-9a-fA-F]+)') ?? {}
+                if exists(parsed.rnti) {
+                    .metric_type = "gnb_rrc_disconnected"
+                    .rnti = parsed.rnti
+                    matched = true
+                }
+            }
+
+            # RSRP
+            if contains(clean_msg, "average RSRP") {
+                parsed = parse_regex(clean_msg, r'UE RNTI (?P<rnti>[0-9a-fA-F]+).*average RSRP\s+(?P<rsrp>[-0-9]+)') ?? {}
+                if exists(parsed.rsrp) {
+                    .metric_type = "gnb_signal_quality"
+                    .rnti = parsed.rnti
+                    .rsrp_dbm = to_int!(parsed.rsrp)
+                    matched = true
+                }
+            }
+
+            # MCS (DL)
+            # Log: UE 135c: dlsch_rounds 8899/26/1/0... BLER 0.00040 MCS (1) 25 CCE fail 0
+            if contains(clean_msg, "dlsch_rounds") {
+                parsed = parse_regex(clean_msg, r'UE (?P<rnti>[0-9a-fA-F]+): dlsch_rounds.*MCS \(\d+\)\s+(?P<mcs_dl>\d+)\s+CCE fail') ?? {}
+                if exists(parsed.mcs_dl) {
+                    .metric_type = "gnb_mcs_dl"
+                    .rnti = parsed.rnti
+                    .mcs_dl = to_int!(parsed.mcs_dl)
+                    matched = true
+                }
+            }
+
+            # MCS and SNR in UL
+            # Log: UE 135c: ulsch_rounds 7530/336... MCS (1) 0 (Qm 2 deltaMCS 0 dB) NPRB 5  SNR 28.0 dB CCE fail 0
+            if contains(clean_msg, "ulsch_rounds") {
+                parsed = parse_regex(clean_msg, r'UE (?P<rnti>[0-9a-fA-F]+): ulsch_rounds.*MCS \(\d+\)\s+(?P<mcs_ul>\d+)\s+\(Qm.*SNR\s+(?P<snr>[-0-9\.]+)\s+dB') ?? {}
+                if exists(parsed.mcs_ul) {
+                    .metric_type = "gnb_mcs_ul"
+                    .rnti = parsed.rnti
+                    .mcs_ul = to_int!(parsed.mcs_ul)
+                    if exists(parsed.snr) {
+                        .snr_db = to_float!(parsed.snr)
+                    }
+                    matched = true
+                }
+            }
+
+            # Traffic measureent (throughput)
+            if contains(clean_msg, "MAC:    TX") {
+                parsed = parse_regex(clean_msg, r'UE (?P<rnti>[0-9a-fA-F]+):\s+MAC:\s+TX\s+(?P<tx_bytes>\d+)\s+RX\s+(?P<rx_bytes>\d+)') ?? {}
+                if exists(parsed.tx_bytes) {
+                    .metric_type = "gnb_mac_throughput"
+                    .rnti = parsed.rnti
+                    .tx_bytes = to_int!(parsed.tx_bytes)
+                    .rx_bytes = to_int!(parsed.rx_bytes)
+                    matched = true
+                }
+            }
+        }
+
+        if !matched {
+            abort
+        }
+
+        del(.kubernetes)
+        del(.message)
+        del(.stream)
+        del(.file)
+
+  # Sinks (JSON output receivers)
+  sinks:
+    php_webhook:
+      type: "http"
+      inputs:
+        - "process_telemetry"
+      uri: "http://apache-internal-svc.apache-internal.svc.cluster.local/api/webhook.php"
+      method: "post"
+      encoding:
+        codec: "json"
+      batch:
+        max_events: 5000
+        timeout_secs: 5

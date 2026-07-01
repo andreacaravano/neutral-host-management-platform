@@ -1,0 +1,25 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 16/05/2026
+#
+#     Description: PostgreSQL PersistentVolumeClaim declaration sketch
+#                  This configuration is suited only for single or fixed node clusters, since it exploits local storage
+#                  In case of a real distributed configuration, consider deploying distributed storage solutions (e.g. Longhorn)
+#
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: data-postgres-postgresql-0
+    namespace: postgres
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 8Gi # This should be <= the size of the PV
+    storageClassName: manual # This must match the PV's storageClassName

@@ -1,0 +1,11 @@
+---
+br_interface: eno1
+br_interface_name: br-ex
+br_nameserver_1: 1.1.1.1
+br_nameserver_2: 8.8.8.8
+br_nameserver_3: 8.8.4.4
+br_search_domain: polimi.lab
+usrp_interface_1: enp65s0f0np0
+usrp_interface_2: enp65s0f1np1
+usrp_interface_1_ip: 192.168.50.1/24
+usrp_interface_2_ip: 192.168.60.1/24

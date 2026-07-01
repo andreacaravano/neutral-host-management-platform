@@ -1,0 +1,59 @@
+# The result can be accessed via host.docker.internal:80
+
+services:
+  apache:
+    image: ghcr.io/andreacaravano/nhmp-apache:latest
+    container_name: apache
+    restart: always
+    volumes:
+      - ./www:/var/www/html:rw
+    ports:
+      - "80:80"
+    networks:
+      - tesi
+
+  postgres:
+    image: postgres:18-trixie
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: polimi
+      POSTGRES_USER: polimi
+      POSTGRES_PASSWORD: polimi
+    volumes:
+      - ./db:/var/lib/postgresql:rw
+    networks:
+      - tesi
+
+  redis:
+    image: redis:8-trixie
+    container_name: redis
+    restart: always
+    environment:
+      REDIS_PASSWORD: polimi
+    command:
+      - /bin/sh
+      - -c
+      # - Double dollars, so that the variable is not expanded by Docker Compose
+      # - Surround by quotes, so that the shell does not split the password
+      # - The ${variable:?message} syntax causes shell to exit with a non-zero
+      #   code and print a message, when the variable is not set or empty
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+    networks:
+      - tesi
+
+  simulator:
+    image: ghcr.io/andreacaravano/nhmp-simulator:latest
+    container_name: simulator
+    restart: always
+    environment:
+      PG_HOST: postgres
+      PG_USER: polimi
+      REDIS_HOST: redis
+      PG_PASS: polimi
+      REDIS_PASS: polimi
+    networks:
+      - tesi
+
+networks:
+  tesi:

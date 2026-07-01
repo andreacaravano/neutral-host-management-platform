@@ -1,0 +1,80 @@
+# Gathers IP, network, MAC, ...
+- name: Gather current network configuration
+  ansible.builtin.setup:
+    gather_subset:
+      - network
+
+# Generate netplan configuration for the bridge interface
+- name: Generate configuration for bridge
+  ansible.builtin.template:
+    src: templates/bridge.yaml.j2
+    dest: /etc/netplan/60-k8s-bridge.yaml
+    mode: "0600"
+    # Security backup for eventual restore
+    backup: true
+
+# Generate netplan configuration for the high-speed USRPs interface
+- name: Generate configuration for high-speed USRP N3xx interfaces
+  ansible.builtin.template:
+    src: templates/usrp.yaml.j2
+    dest: /etc/netplan/70-usrp.yaml
+    mode: "0600"
+    # Security backup for eventual restore
+    backup: true
+
+# Identifies all other netplans (in particular, the 50-cloud-init.yaml could interfere by keeping both interfaces active)
+- name: Find old netplan configuration files
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns: "*.yaml"
+    excludes: "60-k8s-bridge.yaml,70-usrp.yaml" # Naturally, we want to exclude the netplans we just created
+  register: old_netplan_configs
+
+# Identified netplans are now deleted
+- name: Remove conflictual netplans
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_netplan_configs.files }}"
+
+# Apply the new netplan configuration
+- name: Apply the new Netplan configuration
+  ansible.builtin.command: netplan apply
+  async: 45 # do not stop the playbook immediately, if the connection briefly drops at this time
+  poll: 0
+
+# Loads the SCTP kernel module
+- name: Load the SCTP kernel module at runtime
+  community.general.modprobe:
+    name: sctp
+    state: present
+
+- name: Make the SCTP load persistent across reboots
+  ansible.builtin.copy:
+    content: "sctp\n"
+    dest: /etc/modules-load.d/sctp.conf
+    mode: "0644"
+
+- name: Create PersistentVolume local directory
+  ansible.builtin.file:
+    path: "/home/polimi/pv"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0777"
+
+- name: Create Apache-Internal PersistentVolume local directory
+  ansible.builtin.file:
+    path: "/home/polimi/www-int"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0777"
+
+- name: Create Apache-External PersistentVolume local directory
+  ansible.builtin.file:
+    path: "/home/polimi/www"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0777"

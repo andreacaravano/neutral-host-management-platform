@@ -1,0 +1,43 @@
+---
+os: "linux"
+arch: "amd64"
+################################################################################
+vip: 192.168.1.100
+################################################################################
+metallb_version: v0.15.3
+lb_range: 192.168.1.110-192.168.1.120
+lb_pool_name: lb-pool
+################################################################################
+ansible_become: true
+ansible_become_method: sudo
+################################################################################
+# options to change default values
+kube_vip_version: "v1.0.4"
+rke2_version: "v1.34.3+rke2r1"
+################################################################################
+vip_interface: "br-ex"
+
+br_interface: "eno1" # Interface to be used when creating the bridge interface for Multus CNI interoperability with OKD
+br_interface_name: "br-ex" # Interface name to be used when creating the Multus CNI bridge interface
+
+br_nameserver_1: 1.1.1.1 # Nameservers to be used by the bridge interface
+br_nameserver_2: 8.8.8.8
+br_nameserver_3: 8.8.4.4
+
+br_search_domain: polimi.lab
+################################################################################
+usrp_interface_1: enp65s0f0np0
+usrp_interface_2: enp65s0f1np1
+usrp_interface_1_ip: 192.168.50.1/24
+usrp_interface_2_ip: 192.168.60.1/24
+################################################################################
+domain_name_1: caravano.duckdns.org
+domain_name_2: rancher.caravano.duckdns.org
+################################################################################
+ansible_python_interpreter: "/usr/bin/python3" # pre-installed by default on most Debian-based distributions
+################################################################################
+# default rke2 binary directory
+# rke2_install_dir: "/usr/local/bin"
+
+# To switch to the real-time kernel, a Ubuntu Pro Token is needed!
+# See roles/switch-rt-kernel/defaults/main.example.yaml and create main.yaml accordingly

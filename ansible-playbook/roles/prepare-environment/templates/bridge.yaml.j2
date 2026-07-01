@@ -1,0 +1,29 @@
+network:
+  version: 2
+  ethernets:
+    {{ br_interface }}:
+      dhcp4: false
+      dhcp6: false
+      # Important: disables IP connectivity on the original host interface
+      addresses: []
+  bridges:
+    {{ br_interface_name }}:
+      # Clones the MAC address from {{ br_interface }} on the bridge
+      macaddress: {{ ansible_default_ipv4.macaddress }}
+      interfaces: [{{ br_interface }}]
+      addresses:
+        # Automatically gathers the current IP and subnet mask (in CIDR notation)
+        - {{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.prefix }}
+      nameservers:
+        addresses:
+          - {{ br_nameserver_1 }}
+          - {{ br_nameserver_2 }}
+          - {{ br_nameserver_3 }}
+        search:
+          - {{ br_search_domain }}
+      routes:
+        - to: "default"
+          via: {{ ansible_default_ipv4.gateway }}
+      parameters:
+        stp: false
+        forward-delay: 0

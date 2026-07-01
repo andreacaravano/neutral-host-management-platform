@@ -1,0 +1,15 @@
+network:
+  version: 2
+  ethernets:
+    {{ usrp_interface_1 }}:
+      addresses:
+        - {{ usrp_interface_1_ip }}
+      mtu: 9000
+      dhcp4: false
+      dhcp6: false
+    {{ usrp_interface_2 }}:
+      addresses:
+        - {{ usrp_interface_2_ip }}
+      mtu: 9000
+      dhcp4: false
+      dhcp6: false

@@ -1,0 +1,3 @@
+# Updates GRUB with the new kernel parameters
+- name: Update-GRUB
+  ansible.builtin.command: update-grub

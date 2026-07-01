@@ -1,0 +1,157 @@
+# Wait for Server 1 to be ready before continuing with the manifests
+- name: Wait for k8s nodes with node label 'server=true' to be ready
+  ansible.builtin.command:
+    cmd: "kubectl wait --for=condition=Ready nodes --selector server=true --timeout=600s"
+  register: nodes_ready
+  retries: 120
+  delay: 10
+  changed_when: true
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+- name: Wait for Nginx Ingress DaemonSet to be created
+  ansible.builtin.command: 
+    cmd: "kubectl -n kube-system get ds rke2-ingress-nginx-controller"
+  register: ds_exist_check
+  until: ds_exist_check.rc == 0
+  retries: 120 # retry for (120 * 5 = 10) minutes
+  delay: 5
+  ignore_errors: true
+  changed_when: false
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+# Stop the playbook if still not created
+- name: Fail if Nginx Ingress was never created
+  ansible.builtin.fail:
+    msg: "Timeout: RKE2 did not create the Nginx Ingress DaemonSet within 10 minutes. Check RKE2 logs."
+  become_user: "{{ ansible_user }}"
+  when: 
+    - inventory_hostname == groups['servers'][0]
+    - ds_exist_check.rc != 0
+
+# Now, wait for it to be ready
+- name: Wait for Nginx Ingress Controller to be ready
+  ansible.builtin.command:
+    cmd: "kubectl -n kube-system rollout status ds/rke2-ingress-nginx-controller --timeout=600s"
+  changed_when: false
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+# Allow workloads on control plane nodes (actually already allowed by default on RKE2)
+- name: Remove Taint from Control Plane nodes to allow workloads
+  ansible.builtin.command:
+    cmd: "kubectl taint nodes --all node-role.kubernetes.io/control-plane-"
+  ignore_errors: true # Ignores the error thrown when taints have already been removed
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+# Kube-VIP and the embedded Nginx Ingress Controller is sufficient for our single-node deployment, disabling MetalLB
+
+# Create namespace so that we can deploy metallb
+#- name: Apply metallb namespace
+#  ansible.builtin.command:
+#    cmd: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
+#  become_user: "{{ ansible_user }}"
+#  changed_when: true
+#  when: inventory_hostname == groups['servers'][0]
+
+# Apply metallb manifest
+#- name: Apply metallb manifest
+#  ansible.builtin.command:
+#    cmd: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml
+#  become_user: "{{ ansible_user }}"
+#  changed_when: true
+#  when: inventory_hostname == groups['servers'][0]
+
+# Wait for metallb deployment pods to be alive before deploying metallb manifests
+#- name: Wait for metallb pods to be ready, otherwise we cannot start metallb deployment
+#  ansible.builtin.command:
+#    cmd: "kubectl wait --namespace metallb-system --for=condition=ready pod --selector=component=controller --timeout=1800s"
+#  changed_when: true
+#  become_user: "{{ ansible_user }}"
+#  when: inventory_hostname == groups['servers'][0]
+
+# Prepare L2 Advertisement
+#- name: Copy L2 Advertisement to server 1
+#  ansible.builtin.template:
+#    src: templates/L2Advertisement.j2
+#    dest: /home/{{ ansible_user }}/l2-advertisement.yaml
+#    owner: "{{ ansible_user }}"
+#    group: "{{ ansible_user }}"
+#    mode: '0755'
+#  when: inventory_hostname == groups['servers'][0]
+
+# Apply L2 Advertisement for metallb
+#- name: Apply metallb ipppool
+#  ansible.builtin.command:
+#    cmd: kubectl apply -f /home/{{ ansible_user }}/l2-advertisement.yaml
+#  become_user: "{{ ansible_user }}"
+#  changed_when: true
+#  when: inventory_hostname == groups['servers'][0]
+
+# Deploy metal IP Pool to Server 1
+#- name: Copy metallb IPPool to server 1
+#  ansible.builtin.template:
+#    src: templates/metallb-ippool.j2
+#    dest: /home/{{ ansible_user }}/ippool.yaml
+#    owner: "{{ ansible_user }}"
+#    group: "{{ ansible_user }}"
+#    mode: '0755'
+#  when: inventory_hostname == groups['servers'][0]
+
+# IP Pool
+#- name: Apply metallb ipppool
+#  ansible.builtin.command:
+#    cmd: kubectl apply -f /home/{{ ansible_user }}/ippool.yaml
+#  become_user: "{{ ansible_user }}"
+#  changed_when: true
+#  when: inventory_hostname == groups['servers'][0]
+
+# Install Rancher (web GUI) on my custom domain (serviced through a web proxy, whose configuration is omitted here)
+# The same effect can be reached by altering /etc/hosts and pointing the DNS resolution to the right IP
+- name: Add Rancher Helm repository
+  kubernetes.core.helm_repository:
+    name: rancher-stable
+    repo_url: https://releases.rancher.com/server-charts/stable
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+- name: Add Jetstack Helm repository
+  kubernetes.core.helm_repository:
+    name: jetstack
+    repo_url: https://charts.jetstack.io
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+- name: Install cert-manager (waits for availability)
+  kubernetes.core.helm:
+    name: cert-manager
+    chart_ref: jetstack/cert-manager
+    release_namespace: cert-manager
+    create_namespace: true
+    update_repo_cache: true
+    wait: true
+    values:
+      installCRDs: true
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]
+
+- name: Install Rancher (waits for deployment rollout)
+  kubernetes.core.helm:
+    name: rancher
+    chart_ref: rancher-stable/rancher
+    release_namespace: cattle-system
+    create_namespace: true
+    wait: true
+    values:
+      # This domain is served through a web proxy
+      # The same effect can be observed by introducing an entry in /etc/hosts providing a static DNS resolution
+      hostname: rancher.caravano.duckdns.org
+      bootstrapPassword: admin
+      replicas: 1 # single-node setup (alter accordingly, view notes)
+      ingress:
+        tls:
+          source: rancher # Forces the creation of an ingress certificate managed by cert-manager
+  become_user: "{{ ansible_user }}"
+  when: inventory_hostname == groups['servers'][0]

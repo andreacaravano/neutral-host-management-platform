@@ -1,0 +1,24 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 24/05/2026
+#
+#     Description: Customized Open5GS UPF HTTP service for custom traffic control application
+#
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: open5gs-upf-http-svc
+    namespace: srs72
+spec:
+    type: ClusterIP
+    selector:
+        app.kubernetes.io/name: upf
+        app.kubernetes.io/instance: open5gs
+    ports:
+        - port: 8000
+          targetPort: 8000

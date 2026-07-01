@@ -1,0 +1,36 @@
+#
+#                  Politecnico di Milano
+#
+#         Student: Caravano Andrea
+#            A.Y.: 2025/2026
+#
+#   Last modified: 11/05/2026
+#
+#     Description: Redis PersistentVolume declaration sketch
+#                  This configuration is suited only for single or fixed node clusters, since it exploits local storage
+#                  In case of a real distributed configuration, consider deploying distributed storage solutions (e.g. Longhorn)
+#
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: redis-data-redis-master-pv
+    namespace: redis
+spec:
+    capacity:
+        storage: 8Gi # Adjust the size as needed
+    volumeMode: Filesystem
+    accessModes:
+        - ReadWriteOnce
+    persistentVolumeReclaimPolicy: Retain # Can be 'Retain' or 'Delete'
+    storageClassName: manual
+    local:
+        path: /home/polimi/redis # Path to your storage location
+    nodeAffinity:
+        required:
+            nodeSelectorTerms:
+                - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values:
+                            - polimi # Replace with your actual node name
