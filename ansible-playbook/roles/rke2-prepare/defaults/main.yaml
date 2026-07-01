@@ -1,3 +1,4 @@
 ---
 domain_name_1: caravano.duckdns.org
 domain_name_2: rancher.caravano.duckdns.org
+housekeeping_threads: "0-1,12-13"

@@ -1,3 +1,8 @@
 # Updates GRUB with the new kernel parameters
 - name: Update-GRUB
   ansible.builtin.command: update-grub
+# Needed to perform installation of HSMP and ESMI_tool
+- name: Run depmod
+  ansible.builtin.command: depmod -a
+- name: Run ldconfig
+  ansible.builtin.command: ldconfig

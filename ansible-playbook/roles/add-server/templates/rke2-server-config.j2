@@ -11,11 +11,14 @@ node-label:
 cni:
 - multus
 - canal
-kubelet-arg:
+#kubelet-arg:
   # Enable IP forwarding
-  - "allowed-unsafe-sysctls=net.ipv4.ip_forward"
+#  - "allowed-unsafe-sysctls=net.ipv4.ip_forward"
   # Necessary to pin pods on isolated cores
-  - "cpu-manager-policy=static"
+#  - "cpu-manager-policy=static"
+#  - "cpu-manager-policy-options=full-pcpus-only"
   # Reserve cores 0-1 and 12-13 to the host system/K8s (symmetrically coupled)
-  - "reserved-cpus=0-1,12-13"
-  - "topology-manager-policy=best-effort"
+#  - "reserved-cpus={{ housekeeping_threads }}"
+#  - "topology-manager-policy=single-numa-node"
+kubelet-arg:
+  - "config=/etc/rancher/rke2/kubelet-rt.yaml"

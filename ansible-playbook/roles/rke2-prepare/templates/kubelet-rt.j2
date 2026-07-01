@@ -1,0 +1,14 @@
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+
+featureGates:
+  CPUManagerPolicyOptions: true
+  CPUManagerPolicyAlphaOptions: true
+
+cpuManagerPolicy: static
+cpuManagerPolicyOptions:
+  strict-cpu-reservation: "true"
+  full-pcpus-only: "true" # SMT enforcement
+
+reservedSystemCPUs: "{{ housekeeping_threads }}"
+topologyManagerPolicy: "single-numa-node"

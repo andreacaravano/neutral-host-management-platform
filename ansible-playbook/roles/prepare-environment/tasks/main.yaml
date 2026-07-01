@@ -78,3 +78,45 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: "0777"
+
+- name: Create PostgreSQL PersistentVolume local directory
+  ansible.builtin.file:
+    path: "/home/polimi/postgres"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0777"
+
+- name: Create Redis PersistentVolume local directory
+  ansible.builtin.file:
+    path: "/home/polimi/redis"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0777"
+
+- name: Clean up conflicting Ettus PPA source files (Ubuntu 24.04 deb822 fix)
+  ansible.builtin.shell: "rm -f /etc/apt/sources.list.d/*ettusresearch*"
+  changed_when: false
+
+- name: Add Ettus Research UHD PPA
+  ansible.builtin.command: "add-apt-repository -y ppa:ettusresearch/uhd"
+  register: ppa_add
+  changed_when: "'Repository: ' in ppa_add.stdout"
+
+- name: Update apt cache for UHD
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ppa_add.changed
+
+- name: Install UHD host and development libraries
+  ansible.builtin.apt:
+    name:
+      - libuhd-dev
+      - uhd-host
+    state: present
+
+- name: Download UHD FPGA images and firmware
+  ansible.builtin.command: "/usr/bin/uhd_images_downloader"
+  register: uhd_downloader_result
+  changed_when: "'100%' in uhd_downloader_result.stdout"

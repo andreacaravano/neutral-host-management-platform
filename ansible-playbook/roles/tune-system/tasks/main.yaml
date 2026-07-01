@@ -1,83 +1,84 @@
 - name: Install tuned (the same tuning engine in OKD)
   ansible.builtin.apt:
-      name: tuned
-      state: present
+    name: tuned
+    state: present
 
 - name: Create the custom performance profile
   ansible.builtin.file:
-      path: /etc/tuned/srsran-performance
-      state: directory
-      owner: root
-      group: root
-      mode: "0755"
+    path: /etc/tuned/srsran-performance
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
 
 - name: Build the tuning configuration
   ansible.builtin.copy:
-      dest: /etc/tuned/srsran-performance/tuned.conf
-      owner: root
-      group: root
-      mode: "0644"
-      content: |
-          [main]
-          summary=SRS tuned profile for RKE2
-          include=network-latency
+    dest: /etc/tuned/srsran-performance/tuned.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [main]
+      summary=SRS tuned profile for RKE2
+      include=network-latency
 
-          [cpu]
-          force_latency=1
-          governor=performance
-          energy_perf_bias=performance
-          min_perf_pct=100
+      [cpu]
+      force_latency=1
+      governor=performance
+      energy_perf_bias=performance
+      min_perf_pct=100
 
-          [vm]
-          # If a workload mostly uses anonymous memory and it hits this limit,
-          # the entire working set is buffered for I/O, and any more write buffering
-          # would require swapping, so it's time to throttle writes
-          # until I/O can catch up.  Workloads that mostly use file mappings
-          # may be able to use even higher values.
-          #
-          # The generator of dirty data starts writeback at this percentage
-          # (system default is 20%)
-          dirty_ratio=10
-          # Start background writeback (via writeback threads) at this percentage
-          # (system default is 10%)
-          dirty_background_ratio=3
-          # The swappiness parameter controls the tendency of the kernel to move
-          # processes out of physical memory and onto the swap disk.
-          # 0 tells the kernel to avoid swapping processes out of physical memory
-          # for as long as possible
-          # 100 tells the kernel to aggressively swap processes out of physical memory
-          # and move them to swap cache
-          swappiness=10
-          transparent_hugepages=never
+      [vm]
+      # If a workload mostly uses anonymous memory and it hits this limit,
+      # the entire working set is buffered for I/O, and any more write buffering
+      # would require swapping, so it's time to throttle writes
+      # until I/O can catch up.  Workloads that mostly use file mappings
+      # may be able to use even higher values.
+      #
+      # The generator of dirty data starts writeback at this percentage
+      # (system default is 20%)
+      dirty_ratio=10
+      # Start background writeback (via writeback threads) at this percentage
+      # (system default is 10%)
+      dirty_background_ratio=3
+      # The swappiness parameter controls the tendency of the kernel to move
+      # processes out of physical memory and onto the swap disk.
+      # 0 tells the kernel to avoid swapping processes out of physical memory
+      # for as long as possible
+      # 100 tells the kernel to aggressively swap processes out of physical memory
+      # and move them to swap cache
+      swappiness=10
+      transparent_hugepages=never
 
-          [sysctl]
-          kernel.sched_rt_runtime_us=980000
-          # Busy polling helps reduce latency in the network receive path
-          # by allowing socket layer code to poll the receive queue of a
-          # network device, and disabling network interrupts.
-          # busy_read value greater than 0 enables busy polling. Recommended
-          # net.core.busy_read value is 50.
-          # busy_poll value greater than 0 enables polling globally.
-          # Recommended net.core.busy_poll value is 50
-          net.core.busy_poll=50
-          net.core.busy_read=50
-          # TCP fast open reduces network latency by enabling data exchange
-          # during the sender's initial TCP SYN. The value 3 enables fast open
-          # on client and server connections.
-          net.ipv4.tcp_fastopen=3
-          # Upper limit on the number of independent inotify monitoring istances
-          # for a single user
-          fs.inotify.max_user_instances=256
-          # Software ingress queues and synchronous polling
-          net.core.rmem_default=134217728
-          net.core.rmem_max=134217728
-          net.core.wmem_default=134217728
-          net.core.wmem_max=134217728
+      [sysctl]
+      kernel.sched_rt_runtime_us=980000
+      # Busy polling helps reduce latency in the network receive path
+      # by allowing socket layer code to poll the receive queue of a
+      # network device, and disabling network interrupts.
+      # busy_read value greater than 0 enables busy polling. Recommended
+      # net.core.busy_read value is 50.
+      # busy_poll value greater than 0 enables polling globally.
+      # Recommended net.core.busy_poll value is 50
+      net.core.busy_poll=50
+      net.core.busy_read=50
+      # TCP fast open reduces network latency by enabling data exchange
+      # during the sender's initial TCP SYN. The value 3 enables fast open
+      # on client and server connections.
+      net.ipv4.tcp_fastopen=3
+      # Upper limit on the number of independent inotify monitoring istances
+      # for a single user
+      fs.inotify.max_user_instances=256
+      # Software ingress queues and synchronous polling
+      net.core.rmem_default=134217728
+      net.core.rmem_max=134217728
+      net.core.wmem_default=134217728
+      net.core.wmem_max=134217728
+      net.core.netdev_max_backlog=100000
 
-          [net]
-          devices=enp65s0f0np0,enp65s0f1np1
-          ring_rx=4096
-          ring_tx=4096
+      [net]
+      devices=enp65s0f0np0,enp65s0f1np1
+      ring_rx=4096
+      ring_tx=4096
 
 - name: Check currently actived tuning profiles
   ansible.builtin.command: tuned-adm active
@@ -93,43 +94,110 @@
 
 - name: Update kernel parameters in GRUB
   vars:
-      grub_params:
-          - "skew_tick=1"
-          - "nosoftlockup"
-          - "nmi_watchdog=0"
-          - "crashkernel=auto"
-          - "softlockup_panic=0"
-          - "audit=0"
-          - "mce=off"
-          - "mitigations=off" # Pay attention to the security matter
-          - "tsc=nowatchdog"
-          - "tsc=reliable"
-          - "intel_iommu=on"
-          - "iommu=pt"
-          # CPU isolation
-          - "isolcpus=3-11,14-23"
-          - "nohz_full=3-11,14-23"
-          - "rcu_nocbs=3-11,14-23"
-          - "kthread_cpus=0-1,12-13"
-          - "irqaffinity=0-1,12-13"
-          - "rcu_nocb_poll"
-          # Hugepages (1G x 16 = 16GB RAM are reserved)
-          - "default_hugepagesz=1G"
-          - "hugepagesz=1G"
-          - "hugepages=16"
+    grub_params:
+      - "amd_pstate=disable"
+      - "skew_tick=1"
+      - "nosoftlockup"
+      - "nmi_watchdog=0"
+      - "crashkernel=auto"
+      - "softlockup_panic=0"
+      - "audit=0"
+      - "mce=off"
+      - "mitigations=off" # Pay attention to the security matter
+      - "tsc=nowatchdog"
+      - "tsc=reliable"
+      - "amd_iommu=on"
+      - "iommu=pt"
+      # CPU isolation
+      - "isolcpus={{ isolated_threads }}"
+      - "nohz_full={{ isolated_threads }}"
+      - "rcu_nocbs={{ isolated_threads }}"
+      - "kthread_cpus={{ housekeeping_threads }}"
+      - "irqaffinity={{ housekeeping_threads }}"
+      - "rcu_nocb_poll"
+      # Hugepages (1G x 16 = 16GB RAM are reserved)
+      - "default_hugepagesz=1G"
+      - "hugepagesz=1G"
+      - "hugepages=16"
   ansible.builtin.copy:
-      dest: /etc/default/grub.d/99-srsran.cfg
-      content: |
-          GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_params | join(' ') }}"
-      owner: root
-      group: root
-      mode: "0644"
+    dest: /etc/default/grub.d/99-srsran.cfg
+    content: |
+      GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_params | join(' ') }}"
+    owner: root
+    group: root
+    mode: "0644"
   notify: Update-GRUB
 
 # Update kernel configuration for N3xx USRPs (see OpenAirInterface docs)
+# This is not actually needed if patched above
+# Please note: this is only a testing measure - it will reset upon reboot!
 - name: Configure sysctl net.core.wmem_max
   ansible.posix.sysctl:
-      name: net.core.wmem_max
-      value: "25000000"
-      state: present
-      reload: true
+    name: net.core.wmem_max
+    value: "25000000"
+    state: present
+    reload: true
+
+- name: Install build dependencies for HSMP and ESMI
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - linux-libc-dev
+      - linux-headers-{{ ansible_kernel }} # equals linux-headers-$(uname -r), an Ansible "fact" is gathered at the beginning
+      - git
+      - wget
+      - cmake
+    state: present
+    update_cache: yes
+
+- name: Create workspace directory for AMD tools
+  ansible.builtin.file:
+    path: "{{ build_workspace }}"
+    state: directory
+    mode: "0755"
+
+- name: Clone amd_hsmp kernel module repository
+  ansible.builtin.git:
+    repo: "https://github.com/amd/amd_hsmp.git"
+    dest: "{{ build_workspace }}/amd_hsmp"
+    version: master
+
+- name: Build and install amd_hsmp kernel module
+  ansible.builtin.shell: |
+    make
+    make modules_install
+  args:
+    chdir: "{{ build_workspace }}/amd_hsmp"
+  notify: Run depmod
+
+- name: Ensure amd_hsmp is loaded on boot
+  ansible.builtin.copy:
+    content: "amd_hsmp\n"
+    dest: /etc/modules-load.d/amd_hsmp.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load amd_hsmp module immediately
+  ansible.builtin.modprobe:
+    name: amd_hsmp
+    state: present
+
+- name: Clone esmi_ib_library repository
+  ansible.builtin.git:
+    repo: "https://github.com/amd/esmi_ib_library.git"
+    dest: "{{ build_workspace }}/esmi_ib_library"
+    version: master
+
+- name: Build and install esmi_ib_library
+  ansible.builtin.shell: |
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local .
+    make
+    make install
+  args:
+    chdir: "{{ build_workspace }}/esmi_ib_library"
+    creates: /usr/local/bin/e_smi_tool
+  notify: Run ldconfig
+# Please note: AMD uProf cannot be provided by this chart for legal reasons and should be installed autonomously
+# via AMD's website, choosing the .deb package and using Aptitude (apt)
+# required dependencies for AMD uProf are already provided as part of this playbook

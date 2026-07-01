@@ -1,0 +1,5 @@
+sfp_usrp_interfaces: "enp65s0f0np0,enp65s0f1np1"
+isolated_threads: "2-11,14-23"
+housekeeping_threads: "0-1,12-13"
+
+build_workspace: "/root/amd_hsmp_tool"

@@ -1,0 +1,8 @@
+# Kubeconfig to be used by the development container
+.devcontainer/kubeconfig
+
+# Ansible's local artifacts
+.ansible
+
+# Ubuntu Pro token (see example)
+ansible-playbook/roles/switch-rt-kernel/defaults/main.yaml
