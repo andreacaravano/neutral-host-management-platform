@@ -95,7 +95,8 @@
     group: "{{ ansible_user }}"
     mode: "0777"
 
-- name: Clean up conflicting Ettus PPA source files (Ubuntu 24.04 deb822 fix)
+# Fixes new Debian-styled apt source list
+- name: Clean up conflicting Ettus PPA source files
   ansible.builtin.shell: "rm -f /etc/apt/sources.list.d/*ettusresearch*"
   changed_when: false
 

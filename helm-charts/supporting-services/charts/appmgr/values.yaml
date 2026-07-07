@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  repository: nexus3.o-ran-sc.org:10002/o-ran-sc/ric-plt-appmgr
+  pullPolicy: IfNotPresent
+  tag: "0.5.7" # Or use .Values.global.tag
+
+env:
+  CONTAINER_NAME: "appmgr"
+  HOST_NAME: "appmgr-service"
+  POD_NAME: "appmgr_pod"
+  SERVICE_NAME: "appmgr-service"
+  RMR_SRC_ID: "appmgr-service"
+  RMR_RTG_SVC: 4561
+  DBAAS_SERVICE_HOST: dbaas-service
+
+service:
+  httpPort: 8080
+  rmrRoutePort: 4560
+  rmrDataPort: 4561
+
+volumeMounts:
+  - name: appmgr-config
+    mountPath: /opt/ric/config/appmgr.yaml
+    subPath: appmgr.yaml
+
+volumes:
+  - name: appmgr-config
+    configMap:
+      name: appmgr-config
+
+resources: {}

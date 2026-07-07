@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service  # Fixed name, no template logic
+  namespace: srs72           # Your actual namespace
+  labels: # These should match the Grafana Pod labels
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana-srsran
+spec:
+  selector:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana-srsran
+  ports:
+    - port: 3000          # The port exposed by the service
+      targetPort: 3000  # The actual port inside the container
+      protocol: TCP
+      name: http
+  type: ClusterIP
+  clusterIP: None #Removes the clusterIP

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+  namespace: srs72
+spec:
+  capacity:
+    storage: 50Gi  # Adjust the size as needed
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain  # Can be 'Retain' or 'Delete'
+  storageClassName: manual
+  local:
+    path: /home/polimi/pv  # Path to your storage location
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - polimi  # Replace with your actual node name

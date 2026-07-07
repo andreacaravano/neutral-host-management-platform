@@ -76,7 +76,7 @@
       net.core.netdev_max_backlog=100000
 
       [net]
-      devices=enp65s0f0np0,enp65s0f1np1
+      devices={{ sfp_usrp_interfaces }}
       ring_rx=4096
       ring_tx=4096
 

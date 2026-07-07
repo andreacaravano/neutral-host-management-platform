@@ -1,0 +1,74 @@
+replicaCount: 1
+
+image:
+  repository: nexus3.o-ran-sc.org:10002/o-ran-sc/ric-plt-rtmgr
+  pullPolicy: IfNotPresent
+  tag: "0.9.6" # Use .Values.global.tag or specific tag
+
+env:
+  CONTAINER_NAME: "ric_rtmgr-sim"
+  HOST_NAME: "rtmgr-service"
+  POD_NAME: "rtmgr-sim_pod"
+  SERVICE_NAME: "ric_rtmgr-sim_service"
+  CFGFILE: "/cfg/rtmgr-config.yaml"
+  RMR_SEED_RT: "/opt/config/uta-rtg.rt"
+  RMR_SRC_ID: "rtmgr-service"
+  XM_URL: "http://appmgr-service:8080/ric/v1/xapps"
+  DBAAS_SERVICE_HOST: "dbaas-service"
+  RTFILE: "/db/rt.json"
+
+rtmgr:
+  rpe: rmrpush
+  sbi: rmrpush
+  sbiurl: 0.0.0.0
+  nbi: httpRESTful
+  nbiurl: http://rtmgr-service:3800
+
+volumeMounts:
+  - name: rtmgrcfg
+    mountPath: /cfg/rtmgr-config.yaml
+    subPath: rtmgr-config.yaml
+  - name: routes-rtg
+    mountPath: /opt/config/uta-rtg.rt
+    subPath: routes.rtg
+
+servicename:
+  appmgr:
+    http: appmgr-service
+  e2mgr:
+    http: e2mgr-service
+    rmr: e2mgr-service
+  submgr:
+    rmr: submgr-service
+  rtmgr:
+    http: rtmgr-service
+
+serviceport:
+  appmgr:
+    http: 8080
+  e2mgr:
+    http: 3800
+    rmr:
+      data: 3801
+      route: 4561
+  submgr:
+    http: 3800
+    rmr:
+      data: 4560
+      route: 4561
+  rtmgr:
+    http: 3800
+    rmr:
+      data: 4560
+      route: 4561
+
+
+volumes:
+  - name: rtmgrcfg
+    configMap:
+      name: rtmgrcfg
+  - name: routes-rtg
+    configMap:
+      name: routes-rtg
+
+resources: {}

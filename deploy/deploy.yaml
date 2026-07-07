@@ -1,0 +1,166 @@
+---
+- name: Deploy Workloads to RKE2 Cluster
+  # executed locally! the $HOME/.kube/config must be properly configured
+  # see notes in rke2-prepare about fetching
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    kubeconfig_path: "{{ playbook_dir }}/../.devcontainer/kubeconfig"
+    helm_base: "{{ playbook_dir }}/../helm-charts"
+
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+
+  tasks:
+    # Preliminary checks
+    - name: Verify that kubeconfig exists
+      ansible.builtin.stat:
+        path: "{{ kubeconfig_path }}"
+      register: kubeconfig_stat
+
+    - name: Fail if kubeconfig is missing
+      ansible.builtin.fail:
+        msg: "Kubeconfig not found at {{ kubeconfig_path }}. Did you run the infrastructure playbook first?"
+      when: not kubeconfig_stat.stat.exists
+
+    # Namespace setup and cleanup
+    - name: Ensure namespaces exist
+      ansible.builtin.shell: >
+        kubectl create namespace {{ item }} --dry-run=client -o yaml | kubectl apply -f -
+      loop:
+        - srs72
+        - apache-internal
+        - apache-external
+        - postgres
+        - redis
+        - resource-controller
+        - vector
+      changed_when: false
+
+    # WARNING! The inclusion of pv and pvc is fine, but may take a very long time to mark as completed
+    # A trivial workaround is fixing a large timeout or split this phase of the deployment in a semi-automated action
+    - name: Clean up existing resources in namespaces
+      ansible.builtin.command: >
+        kubectl delete replicasets,deployments,jobs,services,pods,secrets,configmaps,statefulsets,serviceaccount,pv,pvc --all -n {{ item }}
+      loop:
+        - srs72
+        - apache-external
+        - apache-internal
+        - default
+        - postgres
+        - redis
+        - resource-controller
+        - vector
+      ignore_errors: true # Terminating resources...
+
+    # Supporting services
+    - name: Install dbaas chart
+      ansible.builtin.command: helm upgrade --install dbaas charts/dbaas -n srs72
+      args:
+        chdir: "{{ helm_base }}/supporting-services"
+
+    - name: Wait 5 seconds for dbaas to initialize
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Install rtmgr-sim chart
+      ansible.builtin.command: helm upgrade --install rtmgr-sim charts/rtmgr-sim -n srs72
+      args:
+        chdir: "{{ helm_base }}/supporting-services"
+
+    - name: Wait 5 seconds for rtmgr-sim to initialize
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Install remaining supporting services
+      ansible.builtin.command: "helm upgrade --install {{ item }} charts/{{ item }} -n srs72"
+      args:
+        chdir: "{{ helm_base }}/supporting-services"
+      loop:
+        - submgr
+        - e2term
+        - appmgr
+        - e2mgr
+
+    # Open5GS
+    - name: Update Open5GS Helm dependencies
+      ansible.builtin.command: helm dependency update
+      args:
+        chdir: "{{ helm_base }}/open5gs/charts/open5gs"
+      changed_when: false
+
+    - name: Install Open5GS and monitoring charts
+      ansible.builtin.command: "helm upgrade --install {{ item }} charts/{{ item }} -n srs72"
+      args:
+        chdir: "{{ helm_base }}/open5gs"
+      loop:
+        - open5gs
+        - influxdb2
+        # - grafana-srsran
+
+    # OAI gNB and FlexRIC
+    - name: Install OAI gNB and FlexRIC charts
+      ansible.builtin.command: "helm upgrade --install {{ item.name }} {{ item.path }} -n srs72"
+      loop:
+        - { name: "oai-gnb", path: "{{ helm_base }}/oai-gnb/oai-gnb" }
+        - { name: "oai-gnb2", path: "{{ helm_base }}/oai-gnb/oai-gnb2" }
+        - {
+            name: "oai-flexric",
+            path: "{{ helm_base }}/oai-flexric/oai-flexric",
+          }
+        - {
+            name: "oai-flexric2",
+            path: "{{ helm_base }}/oai-flexric/oai-flexric2",
+          }
+
+    # Custom manifests
+    - name: Apply custom Kubernetes manifests
+      ansible.builtin.command: "kubectl apply -f {{ playbook_dir }}/../{{ item }}"
+      loop:
+        - helm-charts/supporting-services/persistent-volume.yaml
+        - helm-charts/supporting-services/persistent-volume-claim.yaml
+        - apache/internal/deploy.yaml
+        - apache/external/deploy.yaml
+        - energy-controller/deploy.yaml # Be aware that the power governance framework may fail initial Kubernetes DNS resolution. Restarting the Pod generally solves the issue.
+        - mapper/deploy.yaml
+        - postgres/persistent-volume.yaml
+        - postgres/persistent-volume-claim.yaml
+        - redis/master-persistent-volume.yaml
+        - redis/master-persistent-volume-claim.yaml
+
+    # Short and long term storage: PostgreSQL and Redis
+    - name: Install Bitnami PostgreSQL
+      ansible.builtin.command: >
+        helm upgrade --install postgres oci://registry-1.docker.io/bitnamicharts/postgresql
+        --namespace postgres
+        --create-namespace
+        --set auth.postgresPassword=polimi
+        --set auth.database=polimi
+        --set auth.username=polimi
+        --set auth.password=polimi
+
+    - name: Install Bitnami Redis
+      ansible.builtin.command: >
+        helm upgrade --install redis oci://registry-1.docker.io/bitnamicharts/redis
+        --namespace redis
+        --create-namespace
+        --set auth.password=polimi
+        --set replica.replicaCount=0
+
+    # Vector logging solution
+    - name: Add Vector Helm repository
+      ansible.builtin.command: helm repo add vector https://helm.vector.dev
+      changed_when: false
+
+    - name: Update Helm repositories
+      ansible.builtin.command: helm repo update
+      changed_when: false
+
+    - name: Install Vector
+      ansible.builtin.command: >
+        helm upgrade --install vector vector/vector
+        --namespace vector
+        --create-namespace
+        -f {{ playbook_dir }}/../vector/values.yaml

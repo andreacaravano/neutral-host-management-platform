@@ -1,0 +1,96 @@
+#
+# Copyright 2021-2025 Software Radio Systems Limited
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the distribution.
+#
+
+replicaCount: 1
+
+image:
+  repository: softwareradiosystems/linuxptp
+  pullPolicy: IfNotPresent
+  tag: v4.3_1.1.1
+
+nameOverride: "linuxptp-chart"
+fullnameOverride: "linuxptp-chart"
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: "default"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  capabilities:
+    add: ["SYS_NICE", "NET_ADMIN", "SYS_TIME"]
+  privileged: true
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # limits:
+  #   cpu: 1
+  #   memory: 500Mi
+  # requests:
+  #   cpu: 1
+  #   memory: 500Mi
+
+nodeSelector: {}
+  # kubernetes.io/hostname: node1
+
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - effect: NoExecute
+    operator: Exists
+
+affinity: {}
+
+interfaceName: "ens2f2"
+
+startupProbe:
+  enabled: false
+  failureThreshold: 30
+  periodSeconds: 10
+
+livenessProbe:
+  enabled: false
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+readinessProbe:
+  enabled: false
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+config:
+  dataset_comparison: "G.8275.x"
+  G.8275.defaultDS.localPriority: "128"
+  maxStepsRemoved: "255"
+  logAnnounceInterval: "-3"
+  logSyncInterval: "-4"
+  logMinDelayReqInterval: "-4"
+  serverOnly: "0"
+  clientOnly: "1"
+  G.8275.portDS.localPriority: "128"
+  ptp_dst_mac: "01:80:C2:00:00:0E"
+  network_transport: "L2"
+  domainNumber: "24"
+  tx_timestamp_timeout: "10"
+  ts2phc:
+    enabled: false
+    use_syslog: 0
+    verbose: 1
+    logging_level: 7
+    ts2phc_pulsewidth: 100000000
+    # For GNSS module
+    ts2phc_nmea_serialport: /dev/gnss0
+    ts2phc_extts_polarity: rising

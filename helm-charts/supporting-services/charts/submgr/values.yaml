@@ -1,0 +1,31 @@
+replicaCount: 1
+
+image:
+  repository: nexus3.o-ran-sc.org:10002/o-ran-sc/ric-plt-submgr
+  pullPolicy: IfNotPresent
+  tag: "0.10.1"  # Or use .Values.global.tag
+
+env:
+  CFG_FILE: "/opt/config/submgr-config.yaml"
+  RMR_SEED_RT: "/opt/config/submgr-uta-rtg.rt"
+  RMR_SRC_ID: "submgr-service"
+  RMR_RTG_SVC: 4561
+  DBAAS_SERVICE_HOST: dbaas-service  
+
+volumeMounts:
+  - name: submgr-config
+    mountPath: /opt/config/submgr-config.yaml
+    subPath: submgr-config.yaml
+  - name: submgr-rtg
+    mountPath: /opt/config/submgr-uta-rtg.rt
+    subPath: routes.rtg
+
+volumes:
+  - name: submgr-config
+    configMap:
+      name: submgr-config
+  - name: submgr-rtg
+    configMap:
+      name: submgr-rtg
+
+resources: {}

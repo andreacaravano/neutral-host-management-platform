@@ -1,0 +1,20 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: grafana-route  # Or any unique name in the namespace
+  namespace: srs72 # Replace with your namespace!
+  labels:
+    app.kubernetes.io/name: grafana  #Or the Grafana app name, must match service selector!
+    app.kubernetes.io/instance: srsran-grafana  #Or the grafana instance name!
+spec:
+  host: grafana-srsran.sno.oran.lab
+  port:
+    targetPort: http  # This must match the name of the port used by the service.
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  to:
+    kind: Service
+    name: grafana-service  # Must match the name of your Grafana service!
+    weight: 100
+  wildcardPolicy: None

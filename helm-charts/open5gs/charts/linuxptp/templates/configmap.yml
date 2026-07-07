@@ -1,0 +1,301 @@
+#
+# Copyright 2021-2025 Software Radio Systems Limited
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the distribution.
+#
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linuxptp-configmap
+data:
+  linuxptp.cfg: |
+    [global]
+    #
+    # Default Data Set
+    #
+    twoStepFlag             {{ .Values.config.twoStepFlag | default 1 }}
+    clientOnly              {{ .Values.config.clientOnly | default 1 }}
+    socket_priority         {{ .Values.config.socket_priority | default 0 }}
+    priority1               {{ .Values.config.priority1 | default 128 }}
+    priority2               {{ .Values.config.priority2 | default 128 }}
+    domainNumber            {{ .Values.config.domainNumber | default 0 }}
+    clockClass              {{ .Values.config.clockClass | default 248 }}
+    clockAccuracy           {{ .Values.config.clockAccuracy | default "0xFE" }}
+    offsetScaledLogVariance {{ .Values.config.offsetScaledLogVariance | default "0xFFFF" }}
+    free_running            {{ .Values.config.free_running | default 0 }}
+    freq_est_interval       {{ .Values.config.freq_est_interval | default 1 }}
+    dscp_event              {{ .Values.config.dscp_event | default 0 }}
+    dscp_general            {{ .Values.config.dscp_general | default 0 }}
+    dataset_comparison      {{ .Values.config.dataset_comparison | default "ieee1588" }}
+    maxStepsRemoved         {{ .Values.config.maxStepsRemoved | default 255 }}
+    #
+    # Port Data Set
+    #
+    logAnnounceInterval     {{ .Values.config.logAnnounceInterval | default -3 }}
+    logSyncInterval         {{ .Values.config.logSyncInterval | default -4 }}
+    operLogSyncInterval     {{ .Values.config.operLogSyncInterval | default 0 }}
+    logMinDelayReqInterval  {{ .Values.config.logMinDelayReqInterval | default -4 }}
+    logMinPdelayReqInterval {{ .Values.config.logMinPdelayReqInterval | default 0 }}
+    operLogPdelayReqInterval {{ .Values.config.operLogPdelayReqInterval | default 0 }}
+    announceReceiptTimeout  {{ .Values.config.announceReceiptTimeout | default 3 }}
+    syncReceiptTimeout      {{ .Values.config.syncReceiptTimeout | default 0 }}
+    delay_response_timeout  {{ .Values.config.delay_response_timeout | default 0 }}
+    delayAsymmetry          {{ .Values.config.delayAsymmetry | default 0 }}
+    fault_reset_interval    {{ .Values.config.fault_reset_interval | default 4 }}
+    neighborPropDelayThresh {{ .Values.config.neighborPropDelayThresh | default 20000000 }}
+    serverOnly              {{ .Values.config.serverOnly | default 0 }}
+    asCapable               {{ .Values.config.asCapable | default "auto" }}
+    BMCA                    {{ .Values.config.BMCA | default "ptp" }}
+    inhibit_announce        {{ .Values.config.inhibit_announce | default 0 }}
+    inhibit_delay_req       {{ .Values.config.inhibit_delay_req | default 0 }}
+    ignore_source_id        {{ .Values.config.ignore_source_id | default 0 }}
+    #
+    # Run time options
+    #
+    assume_two_step         {{ .Values.config.assume_two_step | default 0 }}
+    logging_level           {{ .Values.config.logging_level | default 6 }}
+    path_trace_enabled      {{ .Values.config.path_trace_enabled | default 0 }}
+    follow_up_info          {{ .Values.config.follow_up_info | default 0 }}
+    hybrid_e2e              {{ .Values.config.hybrid_e2e | default 0 }}
+    inhibit_multicast_service       {{ .Values.config.inhibit_multicast_service | default 0 }}
+    net_sync_monitor        {{ .Values.config.net_sync_monitor | default 0 }}
+    tc_spanning_tree        {{ .Values.config.tc_spanning_tree | default 0 }}
+    tx_timestamp_timeout    {{ .Values.config.tx_timestamp_timeout | default 10 }}
+    unicast_listen          {{ .Values.config.unicast_listen | default 0 }}
+    unicast_master_table    {{ .Values.config.unicast_master_table | default 0 }}
+    unicast_req_duration    {{ .Values.config.unicast_req_duration | default 3600 }}
+    use_syslog              {{ .Values.config.use_syslog | default 1 }}
+    verbose                 {{ .Values.config.verbose | default 0 }}
+    summary_interval        {{ .Values.config.summary_interval | default 0 }}
+    kernel_leap             {{ .Values.config.kernel_leap | default 1 }}
+    check_fup_sync          {{ .Values.config.check_fup_sync | default 0 }}
+    clock_class_threshold   {{ .Values.config.clock_class_threshold | default 248 }}
+    #
+    # Servo Options
+    #
+    pi_proportional_const   {{ .Values.config.pi_proportional_const | default 0.0 }}
+    pi_integral_const       {{ .Values.config.pi_integral_const | default 0.0 }}
+    pi_proportional_scale   {{ .Values.config.pi_proportional_scale | default 0.0 }}
+    pi_proportional_exponent        {{ .Values.config.pi_proportional_exponent | default -0.3 }}
+    pi_proportional_norm_max        {{ .Values.config.pi_proportional_norm_max | default 0.7 }}
+    pi_integral_scale       {{ .Values.config.pi_integral_scale | default 0.0 }}
+    pi_integral_exponent    {{ .Values.config.pi_integral_exponent | default 0.4 }}
+    pi_integral_norm_max    {{ .Values.config.pi_integral_norm_max | default 0.3 }}
+    step_threshold          {{ .Values.config.step_threshold | default 0.0 }}
+    first_step_threshold    {{ .Values.config.first_step_threshold | default 0.00002 }}
+    max_frequency           {{ .Values.config.max_frequency | default 900000000 }}
+    clock_servo             {{ .Values.config.clock_servo | default "pi" }}
+    sanity_freq_limit       {{ .Values.config.sanity_freq_limit | default 200000000 }}
+    refclock_sock_address   {{ .Values.config.refclock_sock_address | default "/var/run/refclock.ptp.sock" }}
+    ntpshm_segment          {{ .Values.config.ntpshm_segment | default 0 }}
+    msg_interval_request    {{ .Values.config.msg_interval_request | default 0 }}
+    servo_num_offset_values {{ .Values.config.servo_num_offset_values | default 10 }}
+    servo_offset_threshold  {{ .Values.config.servo_offset_threshold | default 0 }}
+    write_phase_mode        {{ .Values.config.write_phase_mode | default 0 }}
+    #
+    # Transport options
+    #
+    transportSpecific       {{ .Values.config.transportSpecific | default 0x0 }}
+    #ptp_dst_mac             {{ .Values.config.ptp_dst_mac | default "01:1B:19:00:00:00" }}
+    #p2p_dst_mac             {{ .Values.config.p2p_dst_mac | default "01:80:C2:00:00:0E" }}
+    udp_ttl                 {{ .Values.config.udp_ttl | default 1 }}
+    udp6_scope              {{ .Values.config.udp6_scope | default 0x0E }}
+    uds_address             {{ .Values.config.uds_address | default "/var/run/ptp4l" }}
+    uds_file_mode           {{ .Values.config.uds_file_mode | default "0660" }}
+    uds_ro_address          {{ .Values.config.uds_ro_address | default "/var/run/ptp4lro" }}
+    uds_ro_file_mode        {{ .Values.config.uds_ro_file_mode | default 0666 }}
+    #
+    # Default interface options
+    #
+    clock_type              {{ .Values.config.clock_type | default "OC" }}
+    network_transport       {{ .Values.config.network_transport | default "UDPv4" }}
+    delay_mechanism         {{ .Values.config.delay_mechanism | default "E2E" }}
+    time_stamping           {{ .Values.config.time_stamping | default "hardware" }}
+    tsproc_mode             {{ .Values.config.tsproc_mode | default "filter" }}
+    delay_filter            {{ .Values.config.delay_filter | default "moving_median" }}
+    delay_filter_length     {{ .Values.config.delay_filter_length | default 10 }}
+    egressLatency           {{ .Values.config.egressLatency | default 0 }}
+    ingressLatency          {{ .Values.config.ingressLatency | default 0 }}
+    boundary_clock_jbod     {{ .Values.config.boundary_clock_jbod | default 0 }}
+    phc_index               {{ .Values.config.phc_index | default -1 }}
+    #
+    # Clock description
+    #
+    productDescription      {{ .Values.config.productDescription | default ";;" }}
+    revisionData            {{ .Values.config.revisionData | default ";;" }}
+    manufacturerIdentity    {{ .Values.config.manufacturerIdentity | default "00:00:00" }}
+    userDescription         {{ .Values.config.userDescription | default ";" }}
+    timeSource              {{ .Values.config.timeSource | default 0xA0 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linuxptp-phc2sys-entrypoint-configmap
+data:
+  entrypoint-phc2sys.sh: {{ tpl (.Files.Get "resources/entrypoint-phc2sys.sh") . | quote | default 000 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linuxptp-ts2phc-entrypoint-configmap
+data:
+  entrypoint-ts2phc.sh: {{ tpl (.Files.Get "resources/entrypoint-ts2phc.sh") . | quote | default 000 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linuxptp-ts2phc-configmap
+data:
+  ts2phc.cfg: |
+    [global]
+    {{- if or (ne .Values.config.ts2phc.use_syslog nil) (.Values.config.ts2phc.use_syslog) }}
+    use_syslog {{ .Values.config.ts2phc.use_syslog }}
+    {{- end }}
+    {{- if .Values.config.ts2phc.verbose }}
+    verbose {{ .Values.config.ts2phc.verbose }}
+    {{- end }}
+    {{- if .Values.config.ts2phc.logging_level }}
+    logging_level {{ .Values.config.ts2phc.logging_level }}
+    {{- end }}
+    {{- if .Values.config.ts2phc.ts2phc_pulsewidth }}
+    ts2phc.pulsewidth {{ mul 1 .Values.config.ts2phc.ts2phc_pulsewidth }}
+    {{- end }}
+    # For GNSS module
+    {{- if .Values.config.ts2phc.ts2phc_nmea_serialport }}
+    ts2phc.nmea_serialport {{ .Values.config.ts2phc.ts2phc_nmea_serialport | default "/dev/gnss0" }}
+    {{- end }}
+    leapfile /etc/leapseconds/leapseconds.list
+    [{{ .Values.interfaceName }}]
+    {{- if .Values.config.ts2phc.ts2phc_extts_polarity }}
+    ts2phc.extts_polarity {{ .Values.config.ts2phc.ts2phc_extts_polarity | default "rising" }}
+    {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linuxptp-ts2phc-leapfile-configmap
+data:
+  leapseconds.list: |
+    #       ATOMIC TIME
+    #       Coordinated Universal Time (UTC) is the reference time scale derived
+    #       from The "Temps Atomique International" (TAI) calculated by the Bureau
+    #       International des Poids et Mesures (BIPM) using a worldwide network of atomic
+    #       clocks. UTC differs from TAI by an integer number of seconds; it is the basis
+    #       of all activities in the world.
+    #
+    #
+    #       ASTRONOMICAL TIME (UT1) is the time scale based on the rate of rotation of the earth.
+    #       It is now mainly derived from Very Long Baseline Interferometry (VLBI). The various
+    #       irregular fluctuations progressively detected in the rotation rate of the Earth led
+    #       in 1972 to the replacement of UT1 by UTC as the reference time scale.
+    #
+    #
+    #       LEAP SECOND
+    #       Atomic clocks are more stable than the rate of the earth's rotation since the latter
+    #       undergoes a full range of geophysical perturbations at various time scales: lunisolar
+    #       and core-mantle torques, atmospheric and oceanic effects, etc.
+    #       Leap seconds are needed to keep the two time scales in agreement, i.e. UT1-UTC smaller
+    #       than 0.9 seconds. Therefore, when necessary a "leap second" is applied to UTC.
+    #       Since the adoption of this system in 1972 it has been necessary to add a number of seconds to UTC,
+    #       firstly due to the initial choice of the value of the second (1/86400 mean solar day of
+    #       the year 1820) and secondly to the general slowing down of the Earth's rotation. It is
+    #       theoretically possible to have a negative leap second (a second removed from UTC), but so far,
+    #       all leap seconds have been positive (a second has been added to UTC). Based on what we know about
+    #       the earth's rotation, it is unlikely that we will ever have a negative leap second.
+    #
+    #
+    #       HISTORY
+    #       The first leap second was added on June 30, 1972. Until the year 2000, it was necessary in average to add a
+    #       leap second at a rate of 1 to 2 years. Since the year 2000 leap seconds are introduced with an
+    #       average interval of 3 to 4 years due to the acceleration of the Earth's rotation speed.
+    #
+    #
+    #       RESPONSIBILITY OF THE DECISION TO INTRODUCE A LEAP SECOND IN UTC
+    #       The decision to introduce a leap second in UTC is the responsibility of the Earth Orientation Center of
+    #       the International Earth Rotation and reference System Service (IERS). This center is located at Paris
+    #       Observatory. According to international agreements, leap seconds should be scheduled only for certain dates:
+    #       first preference is given to the end of December and June, and second preference at the end of March
+    #       and September. Since the introduction of leap seconds in 1972, only dates in June and December were used.
+    #
+    #               Questions or comments to:
+    #                       Christian Bizouard:  christian.bizouard@obspm.fr
+    #                       Earth orientation Center of the IERS
+    #                       Paris Observatory, France
+    #
+    #
+    #
+    #       COPYRIGHT STATUS OF THIS FILE
+    #       This file is in the public domain.
+    #
+    #
+    #       VALIDITY OF THE FILE
+    #       It is important to express the validity of the file. These next two dates are
+    #       given in units of seconds since 1900.0.
+    #
+    #       1) Last update of the file.
+    #
+    #       Updated through IERS Bulletin C (https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat)
+    #
+    #       The following line shows the last update of this file in NTP timestamp:
+    #
+    #$      3945196800
+    #
+    #       2) Expiration date of the file given on a semi-annual basis: last June or last December
+    #
+    #       File expires on 28 December 2025
+    #
+    #       Expire date in NTP timestamp:
+    #
+    #@      3975868800
+    #
+    #
+    #       LIST OF LEAP SECONDS
+    #       NTP timestamp (X parameter) is the number of seconds since 1900.0
+    #
+    #       MJD: The Modified Julian Day number. MJD = X/86400 + 15020
+    #
+    #       DTAI: The difference DTAI= TAI-UTC in units of seconds
+    #       It is the quantity to add to UTC to get the time in TAI
+    #
+    #       Day Month Year : epoch in clear
+    #
+    #NTP Time      DTAI    Day Month Year
+    #
+    2272060800      10      # 1 Jan 1972
+    2287785600      11      # 1 Jul 1972
+    2303683200      12      # 1 Jan 1973
+    2335219200      13      # 1 Jan 1974
+    2366755200      14      # 1 Jan 1975
+    2398291200      15      # 1 Jan 1976
+    2429913600      16      # 1 Jan 1977
+    2461449600      17      # 1 Jan 1978
+    2492985600      18      # 1 Jan 1979
+    2524521600      19      # 1 Jan 1980
+    2571782400      20      # 1 Jul 1981
+    2603318400      21      # 1 Jul 1982
+    2634854400      22      # 1 Jul 1983
+    2698012800      23      # 1 Jul 1985
+    2776982400      24      # 1 Jan 1988
+    2840140800      25      # 1 Jan 1990
+    2871676800      26      # 1 Jan 1991
+    2918937600      27      # 1 Jul 1992
+    2950473600      28      # 1 Jul 1993
+    2982009600      29      # 1 Jul 1994
+    3029443200      30      # 1 Jan 1996
+    3076704000      31      # 1 Jul 1997
+    3124137600      32      # 1 Jan 1999
+    3345062400      33      # 1 Jan 2006
+    3439756800      34      # 1 Jan 2009
+    3550089600      35      # 1 Jul 2012
+    3644697600      36      # 1 Jul 2015
+    3692217600      37      # 1 Jan 2017
+    #
+    #       A hash code has been generated to be able to verify the integrity
+    #       of this file. For more information about using this hash code,
+    #       please see the readme file in the 'source' directory :
+    #       https://hpiers.obspm.fr/iers/bul/bulc/ntp/sources/README
+    #
+    #h      848434d5 570f7ea8 d79ba227 a00fc821 f608e2d4

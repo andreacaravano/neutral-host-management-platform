@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: oai-flexric2
+  labels:
+    app: oai-flexric2
+    {{- include "oai-flexric2.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: e2
+      port: 36421
+      targetPort: 36421
+      protocol: SCTP
+    - name: e42
+      port: 36422
+      targetPort: 36422
+      protocol: SCTP
+  selector:
+    {{- include "oai-flexric2.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: rtmgr
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: rtmgr
+  template:
+    metadata:
+      labels:
+        app: rtmgr
+    spec:
+      containers:
+        - name: rtmgr
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: "http"
+              containerPort: {{ .Values.serviceport.rtmgr.http }}
+            - name: "rmrroute"
+              containerPort: {{ .Values.serviceport.rtmgr.rmr.route }}
+            - name: "rmrdata"
+              containerPort: {{ .Values.serviceport.rtmgr.rmr.data }}
+          # command: ["/run_rtmgr.sh"]
+          command: ["/bin/sh", "-c"]
+          args:
+            - ./rtmgr -f $CFGFILE
+            #- sleep 10000;
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.volumes | nindent 8 }}

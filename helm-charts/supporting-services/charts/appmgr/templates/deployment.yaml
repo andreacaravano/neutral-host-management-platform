@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-deployment
+  labels:
+    app: appmgr
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: appmgr
+  template:
+    metadata:
+      labels:
+        app: appmgr
+    spec:
+      containers:
+        - name: appmgr
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            - name: rmrroute
+              containerPort: {{ .Values.service.rmrRoutePort }}
+              protocol: TCP
+            - name: rmrdata
+              containerPort: {{ .Values.service.rmrDataPort }}
+              protocol: TCP
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: appmgr-config
+              mountPath: /opt/ric/config/appmgr.yaml
+              subPath: appmgr.yaml
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+      # Volumes must be defined at the same level as 'containers'
+      volumes:
+        - name: appmgr-config
+          configMap:
+            name: appmgr-config

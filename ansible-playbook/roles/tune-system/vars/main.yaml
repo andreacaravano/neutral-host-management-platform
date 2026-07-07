@@ -3,3 +3,4 @@ isolated_threads: "2-11,14-23"
 housekeeping_threads: "0-1,12-13"
 
 build_workspace: "/root/amd_hsmp_tool"
+hsmp_c_url: "https://raw.githubusercontent.com/torvalds/linux/v6.8/tools/arch/x86/amd_hsmp/hsmp.c"

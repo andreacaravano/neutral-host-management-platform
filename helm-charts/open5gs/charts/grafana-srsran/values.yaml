@@ -1,0 +1,67 @@
+#
+# Copyright 2021-2025 Software Radio Systems Limited
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the distribution.
+#
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+grafana:
+  serviceAccountName: default
+  image:
+    repository: softwareradiosystems/grafana
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: InfluxDB
+          type: influxdb
+          access: proxy
+          url: http://influxdb2.srs72.svc.cluster.local:8086
+          uid: JOSE3g9KVz
+          jsonData:
+            version: Flux
+            organization: srs
+            defaultBucket: srsran
+            tlsSkipVerify: true
+          secureJsonData:
+            token: 605bc59413b7d5457d181ccf20f9fda15693f81b068d70396cc183081b264f3b
+  env:
+    GF_AUTH_ANONYMOUS_ENABLED: true
+
+metrics-server:
+  config:
+    port: 55555
+    bucket: srsran
+    testbed: default
+    url: http://influxdb2.srs72.svc.cluster.local:8086
+    org: srs
+    token: "605bc59413b7d5457d181ccf20f9fda15693f81b068d70396cc183081b264f3b"
+    serviceType: "ClusterIP"

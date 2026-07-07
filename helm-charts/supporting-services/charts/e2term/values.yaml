@@ -1,0 +1,54 @@
+replicaCount: 1
+
+image:
+  repository: nexus3.o-ran-sc.org:10002/o-ran-sc/ric-plt-e2
+  pullPolicy: IfNotPresent
+  tag: "6.0.4" # Or use .Values.global.tag
+
+service:
+  type: ClusterIP
+  port: 36421 # SCTP port
+
+env:
+  CONTAINER_NAME: "ric_e2term"
+  HOST_NAME: "ric_e2term_host"
+  POD_NAME: "e2term"
+  SERVICE_NAME: "ric_e2term_service"
+  print: "1"
+  sctp: 36421
+  nano: 38000
+  RMR_RTG_SVC: 4561
+  RMR_SEED_RT: "/opt/e2/dockerRouter.txt"
+  RMR_SRC_ID: "e2term-service"
+
+volumeMounts:
+  - name: e2term-config
+    mountPath: /tmp/config.conf
+    subPath: e2term.conf
+  - name: e2term-rtg
+    mountPath: /opt/e2/dockerRouter.txt
+    subPath: routes.rtg
+
+volumes:
+  - name: e2term-config
+    configMap:
+      name: e2term-config
+  - name: e2term-rtg
+    configMap:
+      name: e2term-rtg
+
+resources: {}
+
+podSecurityContext:
+  runAsUser: 0
+  runAsGroup: 0
+
+securityContext:
+ capabilities:
+    add:
+     - SYS_NICE
+     - NET_ADMIN
+     - NET_RAW
+    drop:
+     - ALL
+ privileged: true

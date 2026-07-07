@@ -1,0 +1,24 @@
+#
+# Copyright 2021-2025 Software Radio Systems Limited
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the distribution.
+#
+
+apiVersion: v2
+name: grafana-deployment
+description: A Helm chart to deploy Grafana for srsRAN
+type: application
+version: 1.0.0
+appVersion: "1.16.0"
+
+dependencies:
+  - name: grafana
+    repository: "https://grafana.github.io/helm-charts"
+    version: "8.0.1"
+    alias: grafana
+  - name: metrics-server
+    repository: "https://srsran.github.io/srsRAN_Project_helm/"
+    version: 1.1.0
+    alias: metrics-server
